@@ -1,56 +1,9 @@
 import React, { useState, useRef, useCallback, useMemo } from "react";
 import { BpmnModeler, DmnModeler } from "@miragon/camunda-web-modeler";
 import CamundaForm from './camundaForm';
-
-// Default contents
-const defaultBpmnXml = `<?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions 
-    xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" 
-    xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" 
-    xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" 
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-    targetNamespace="http://bpmn.io/schema/bpmn"
-    id="Definitions_1"
->
-  <bpmn:process id="Process_1" isExecutable="true">
-    <bpmn:startEvent id="StartEvent_1" name="Start" />
-  </bpmn:process>
-  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
-    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1" />
-  </bpmndi:BPMNDiagram>
-</bpmn:definitions>`;
-
-const defaultDmnXml = `<?xml version="1.0" encoding="UTF-8"?>
-<definitions 
-    xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/" 
-    xmlns:dmndi="https://www.omg.org/spec/DMN/20191111/DMNDI/" 
-    xmlns:dc="http://www.omg.org/spec/DD/20100524/DC/" 
-    xmlns:feel="https://www.omg.org/spec/FEEL/20140401"
-    id="definitions"
-    name="definitions"
-    namespace="http://camunda.org/schema/1.0/dmn"
->
-    <decision id="decision_1" name="Decision 1">
-        <decisionTable id="decisionTable_1">
-            <input id="input_1">
-                <inputExpression id="inputExpression_1" typeRef="string">
-                    <text>inputVar</text>
-                </inputExpression>
-            </input>
-            <output id="output_1" typeRef="string" />
-        </decisionTable>
-    </decision>
-    <dmndi:DMNDI>
-        <dmndi:DMNDiagram id="DMNDiagram_1"></dmndi:DMNDiagram>
-    </dmndi:DMNDI>
-</definitions>`;
-
-const defaultFormJson = `{
-  "schemaVersion": 3,
-  "id": "Form_1",
-  "type": "default",
-  "components": []
-}`;
+import { defaultBpmnXml, defaultDmnXml, defaultFormJson } from './defaultContents';
+import UploadComponent from './uploadComponent';
+import ExportComponent from './exportComponent';
 
 const ModelerComponent = () => {
     const [modelType, setModelType] = useState("bpmn");
@@ -90,40 +43,9 @@ const ModelerComponent = () => {
         }
     };
 
-    const getModelerComponent = () => {
-        switch (modelType) {
-            case "bpmn":
-                return (
-                    <BpmnModeler
-                        key="bpmn-editor"
-                        xml={modelData}
-                        onMount={(modeler) => {
-                            bpmnModelerRef.current = modeler;
-                            modeler.importXML(modelData).catch(err => {
-                                console.error('Error importing XML:', err);
-                            });
-                        }}
-                        onEvent={handleEvent}
-                        options={modelerOptions}
-                    />
-                );
-            case "dmn":
-                return (
-                    <DmnModeler
-                        key="dmn-editor"
-                        xml={modelData}
-                        onMount={(modeler) => {
-                            bpmnModelerRef.current = modeler;
-                        }}
-                        onEvent={handleEvent}
-                        options={modelerOptions}
-                    />
-                );
-            case "form":
-                return <CamundaForm key="form-editor" formData={modelData} />;
-            default:
-                return null;
-        }
+    const handleFileUpload = (content, name) => {
+        setModelData(content);
+        setFileName(name);
     };
 
     return (
@@ -142,8 +64,43 @@ const ModelerComponent = () => {
                 </select>
             </div>
 
+            {/* Upload Component */}
+            <UploadComponent onFileUpload={handleFileUpload} />
+
+            {/* Export Component */}
+            <ExportComponent
+                modelData={modelData}
+                fileName={fileName}
+                bpmnModelerRef={bpmnModelerRef}
+            />
+
             <div style={{ height: "80vh", border: "1px solid #ccc" }}>
-                {getModelerComponent()}
+                {modelType === "bpmn" && (
+                    <BpmnModeler
+                        key="bpmn-editor"
+                        xml={modelData}
+                        onMount={(modeler) => {
+                            bpmnModelerRef.current = modeler;
+                            modeler.importXML(modelData).catch(err => {
+                                console.error('Error importing XML:', err);
+                            });
+                        }}
+                        onEvent={handleEvent}
+                        options={modelerOptions}
+                    />
+                )}
+                {modelType === "dmn" && (
+                    <DmnModeler
+                        key="dmn-editor"
+                        xml={modelData}
+                        onMount={(modeler) => {
+                            bpmnModelerRef.current = modeler;
+                        }}
+                        onEvent={handleEvent}
+                        options={modelerOptions}
+                    />
+                )}
+                {modelType === "form" && <CamundaForm key="form-editor" formData={modelData} />}
             </div>
         </div>
     );
