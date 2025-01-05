@@ -89,7 +89,7 @@ const CamundaForm = ({ initialSchema, onSchemaChange }) => {
       <h3>Form Builder</h3>
 
       <div style={{ marginBottom: '1rem' }}>
-        <button onClick={handleSaveForm}>Formu Kaydet</button>
+        <button onClick={handleSaveForm}>Formu İndir</button>
         <label style={{ marginLeft: '10px', cursor: 'pointer' }}>
           Form Yükle
           <input

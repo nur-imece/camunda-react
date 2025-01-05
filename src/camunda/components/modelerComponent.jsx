@@ -64,15 +64,16 @@ const ModelerComponent = () => {
                 </select>
             </div>
 
-            {/* Upload Component */}
-            <UploadComponent onFileUpload={handleFileUpload} />
-
-            {/* Export Component */}
-            <ExportComponent
-                modelData={modelData}
-                fileName={fileName}
-                bpmnModelerRef={bpmnModelerRef}
-            />
+            {modelType !== "form" && (
+                <>
+                    <UploadComponent onFileUpload={handleFileUpload} />
+                    <ExportComponent
+                        modelData={modelData}
+                        fileName={fileName}
+                        bpmnModelerRef={bpmnModelerRef}
+                    />
+                </>
+            )}
 
             <div style={{ height: "80vh", border: "1px solid #ccc" }}>
                 {modelType === "bpmn" && (
