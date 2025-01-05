@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 const UploadComponent = ({ onFileUpload }) => {
     const handleFileChange = (event) => {
@@ -14,11 +14,12 @@ const UploadComponent = ({ onFileUpload }) => {
     };
 
     return (
-        <div style={{ marginBottom: "10px" }}>
-            <label>Upload Model: </label>
+        <div className="upload-container">
+            <label className="upload-label">Upload Model: </label>
             <input
                 type="file"
                 accept=".bpmn,.dmn,.form,.json,.xml"
+                className="upload-input"
                 onChange={handleFileChange}
             />
         </div>

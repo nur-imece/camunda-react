@@ -1,14 +1,16 @@
 import React, { useState, useRef, useCallback, useMemo } from "react";
 import { BpmnModeler, DmnModeler } from "@miragon/camunda-web-modeler";
-import CamundaForm from './camundaForm';
-import { defaultBpmnXml, defaultDmnXml, defaultFormJson } from './defaultContents';
-import UploadComponent from './uploadComponent';
-import ExportComponent from './exportComponent';
+import CamundaForm from "./camundaForm";
+import { defaultBpmnXml, defaultDmnXml, defaultFormJson } from "./defaultContents";
+import UploadComponent from "./uploadComponent";
+import ExportComponent from "./exportComponent";
+import DeployDiagramComponent from "./deployDiagramComponent";
 
 const ModelerComponent = () => {
     const [modelType, setModelType] = useState("bpmn");
     const [modelData, setModelData] = useState(defaultBpmnXml);
     const [fileName, setFileName] = useState("process-model.bpmn");
+    const [showDeployDialog, setShowDeployDialog] = useState(false); // State to control Deploy form visibility
     const bpmnModelerRef = useRef(null);
 
     const handleEvent = useCallback(async (event) => {
@@ -31,7 +33,7 @@ const ModelerComponent = () => {
                 try {
                     await bpmnModelerRef.current.importXML(defaultBpmnXml);
                 } catch (err) {
-                    console.error('Error importing XML:', err);
+                    console.error("Error importing XML:", err);
                 }
             }
         } else if (newType === "dmn") {
@@ -49,20 +51,57 @@ const ModelerComponent = () => {
     };
 
     return (
-        <div style={{ padding: "20px" }}>
-            <h1>Modeler</h1>
+        <div className="container">
+            <h1 className="header">Modeler</h1>
 
-            <div style={{ marginBottom: "10px" }}>
+            <div className="form-group">
                 <label>Model Type: </label>
                 <select
                     value={modelType}
                     onChange={(e) => handleChangeModelType(e.target.value)}
+                    className="model-select"
                 >
                     <option value="bpmn">BPMN</option>
                     <option value="dmn">DMN</option>
                     <option value="form">Form</option>
                 </select>
             </div>
+
+            <button
+                style={{
+                    marginTop: "10px",
+                    padding: "10px",
+                    backgroundColor: "#007bff",
+                    color: "#fff",
+                    border: "none",
+                    cursor: "pointer",
+                }}
+                onClick={() => setShowDeployDialog(true)} // Show Deploy form as a modal
+            >
+                Deploy
+            </button>
+
+            {/* Deploy Modal */}
+            {showDeployDialog && (
+                <div className="modal-overlay">
+                    <div className="modal-content">
+                        <DeployDiagramComponent />
+                        <button
+                            style={{
+                                marginTop: "10px",
+                                padding: "10px",
+                                backgroundColor: "#dc3545",
+                                color: "#fff",
+                                border: "none",
+                                cursor: "pointer",
+                            }}
+                            onClick={() => setShowDeployDialog(false)} // Close Deploy modal
+                        >
+                            Close
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {modelType !== "form" && (
                 <>
@@ -75,15 +114,15 @@ const ModelerComponent = () => {
                 </>
             )}
 
-            <div style={{ height: "80vh", border: "1px solid #ccc" }}>
+            <div className="editor-container">
                 {modelType === "bpmn" && (
                     <BpmnModeler
                         key="bpmn-editor"
                         xml={modelData}
                         onMount={(modeler) => {
                             bpmnModelerRef.current = modeler;
-                            modeler.importXML(modelData).catch(err => {
-                                console.error('Error importing XML:', err);
+                            modeler.importXML(modelData).catch((err) => {
+                                console.error("Error importing XML:", err);
                             });
                         }}
                         onEvent={handleEvent}
@@ -101,7 +140,9 @@ const ModelerComponent = () => {
                         options={modelerOptions}
                     />
                 )}
-                {modelType === "form" && <CamundaForm key="form-editor" formData={modelData} />}
+                {modelType === "form" && (
+                    <CamundaForm key="form-editor" formData={modelData} />
+                )}
             </div>
         </div>
     );

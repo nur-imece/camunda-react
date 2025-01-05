@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 const ExportComponent = ({ modelData, fileName, bpmnModelerRef }) => {
     const handleExport = async () => {
@@ -19,13 +19,15 @@ const ExportComponent = ({ modelData, fileName, bpmnModelerRef }) => {
             a.click();
             URL.revokeObjectURL(url);
         } catch (error) {
-            console.error('Error exporting model:', error);
+            console.error("Error exporting model:", error);
         }
     };
 
     return (
-        <div style={{ marginBottom: "10px" }}>
-            <button onClick={handleExport}>Export Model</button>
+        <div className="export-container">
+            <button className="export-button" onClick={handleExport}>
+                Export Model
+            </button>
         </div>
     );
 };
