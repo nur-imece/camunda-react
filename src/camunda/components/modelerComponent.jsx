@@ -1,8 +1,8 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useCallback, useMemo } from "react";
 import { BpmnModeler, DmnModeler } from "@miragon/camunda-web-modeler";
 import CamundaForm from './camundaForm';
 
-// Varsayılan içerikler
+// Default contents
 const defaultBpmnXml = `<?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions 
     xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" 
@@ -13,7 +13,7 @@ const defaultBpmnXml = `<?xml version="1.0" encoding="UTF-8"?>
     id="Definitions_1"
 >
   <bpmn:process id="Process_1" isExecutable="true">
-    <bpmn:startEvent id="StartEvent_1" name="Başlangıç" />
+    <bpmn:startEvent id="StartEvent_1" name="Start" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1" />
@@ -30,7 +30,7 @@ const defaultDmnXml = `<?xml version="1.0" encoding="UTF-8"?>
     name="definitions"
     namespace="http://camunda.org/schema/1.0/dmn"
 >
-    <decision id="decision_1" name="Karar 1">
+    <decision id="decision_1" name="Decision 1">
         <decisionTable id="decisionTable_1">
             <input id="input_1">
                 <inputExpression id="inputExpression_1" typeRef="string">
@@ -58,130 +58,35 @@ const ModelerComponent = () => {
     const [fileName, setFileName] = useState("process-model.bpmn");
     const bpmnModelerRef = useRef(null);
 
-    useEffect(() => {
-        console.log("useEffect triggered, bpmnModelerRef:", bpmnModelerRef.current);
-        
-        if (bpmnModelerRef.current) {
-            const modeler = bpmnModelerRef.current;
-            console.log("Modeler instance:", modeler);
-            
-            const handleModelUpdate = async () => {
-                try {
-                    const { xml } = await modeler.saveXML({ format: true });
-                    console.log('Model updated:', xml);
-                    setModelData(xml);
-                } catch (err) {
-                    console.error('Error saving XML:', err);
-                }
-            };
-
-            modeler.on('commandStack.changed', handleModelUpdate);
-
-            return () => {
-                modeler.off('commandStack.changed', handleModelUpdate);
-            };
+    const handleEvent = useCallback(async (event) => {
+        if (event.source === "modeler" && event.event === "content.saved") {
+            const { xml } = event.data;
+            setModelData(xml);
         }
-    }, [modelType]); // Only re-run when modelType changes
+    }, []);
 
-    const handleChangeModelType = (newType) => {
+    const modelerOptions = useMemo(() => ({
+        refs: [bpmnModelerRef],
+    }), []);
+
+    const handleChangeModelType = async (newType) => {
         setModelType(newType);
         if (newType === "bpmn") {
             setModelData(defaultBpmnXml);
             setFileName("process-model.bpmn");
+            if (bpmnModelerRef.current) {
+                try {
+                    await bpmnModelerRef.current.importXML(defaultBpmnXml);
+                } catch (err) {
+                    console.error('Error importing XML:', err);
+                }
+            }
         } else if (newType === "dmn") {
             setModelData(defaultDmnXml);
             setFileName("decision-model.dmn");
         } else if (newType === "form") {
             setModelData(defaultFormJson);
             setFileName("form-model.form");
-        }
-    };
-
-    const handleNewModel = () => {
-        if (modelType === "bpmn") {
-            setModelData(defaultBpmnXml);
-            setFileName("process-model.bpmn");
-        } else if (modelType === "dmn") {
-            setModelData(defaultDmnXml);
-            setFileName("decision-model.dmn");
-        } else if (modelType === "form") {
-            setModelData(defaultFormJson);
-            setFileName("form-model.form");
-        }
-    };
-
-    const handleLoadModel = (event) => {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const content = e.target.result;
-            
-            if (file.name.endsWith('.form') || file.name.endsWith('.json')) {
-                try {
-                    JSON.parse(content);
-                    setModelData(content);
-                    setModelType('form');
-                } catch (err) {
-                    console.error('JSON parse hatası:', err);
-                    alert('Geçersiz form dosyası');
-                    return;
-                }
-            } else if (file.name.endsWith('.bpmn')) {
-                setModelData(content);
-                setModelType('bpmn');
-            } else if (file.name.endsWith('.dmn')) {
-                setModelData(content);
-                setModelType('dmn');
-            }
-            setFileName(file.name);
-        };
-        reader.readAsText(file);
-    };
-
-    const handleSaveModel = async () => {
-        try {
-            let dataToSave;
-            let mimeType;
-
-            if (modelType === "bpmn" && bpmnModelerRef.current) {
-                console.log("BPMN export başladı");
-                const { xml } = await bpmnModelerRef.current.saveXML({ format: true });
-                console.log("handleSaveModel - Exporting XML:", xml);
-                dataToSave = xml;
-                mimeType = "application/xml";
-            } else if (modelType === "dmn" && bpmnModelerRef.current) {
-                console.log("DMN export başladı");
-                const { xml } = await bpmnModelerRef.current.saveXML({ format: true });
-                console.log("handleSaveModel - Exporting XML:", xml);
-                dataToSave = xml;
-                mimeType = "application/xml";
-            } else if (modelType === "form") {
-                mimeType = "application/json";
-                try {
-                    const parsed = JSON.parse(modelData);
-                    dataToSave = JSON.stringify(parsed, null, 2);
-                } catch (err) {
-                    console.error('Form verisi dönüştürme hatası:', err);
-                    alert('Form verisi kaydedilirken bir hata oluştu');
-                    return;
-                }
-            } else {
-                mimeType = "application/xml";
-                dataToSave = modelData;
-            }
-
-            const blob = new Blob([dataToSave], { type: mimeType });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = fileName;
-            a.click();
-            URL.revokeObjectURL(url);
-        } catch (error) {
-            console.error('Model kaydetme hatası:', error);
-            alert('Model kaydedilirken bir hata oluştu');
         }
     };
 
@@ -193,35 +98,13 @@ const ModelerComponent = () => {
                         key="bpmn-editor"
                         xml={modelData}
                         onMount={(modeler) => {
-                            console.log('BpmnModeler mounted:', modeler);
                             bpmnModelerRef.current = modeler;
+                            modeler.importXML(modelData).catch(err => {
+                                console.error('Error importing XML:', err);
+                            });
                         }}
-                        onChanged={async (event) => {
-                            console.log('onChanged triggered', event);
-                            if (event.modeler) {
-                                bpmnModelerRef.current = event.modeler;
-                                try {
-                                    const { xml } = await event.modeler.saveXML({ format: true });
-                                    console.log('onChanged - Updated XML:', xml);
-                                    setModelData(xml);
-                                } catch (err) {
-                                    console.error('BPMN XML kaydetme hatası:', err);
-                                }
-                            }
-                        }}
-                        onEvent={(event) => {
-                            console.log('onEvent triggered:', event);
-                            if (event.type === 'commandStack.changed' && bpmnModelerRef.current) {
-                                bpmnModelerRef.current.saveXML({ format: true })
-                                    .then(({ xml }) => {
-                                        console.log('onEvent - Updated XML:', xml);
-                                        setModelData(xml);
-                                    })
-                                    .catch(err => {
-                                        console.error('Event BPMN XML kaydetme hatası:', err);
-                                    });
-                            }
-                        }}
+                        onEvent={handleEvent}
+                        options={modelerOptions}
                     />
                 );
             case "dmn":
@@ -229,39 +112,15 @@ const ModelerComponent = () => {
                     <DmnModeler
                         key="dmn-editor"
                         xml={modelData}
-                        onChanged={(event) => {
-                            if (event.modeler) {
-                                event.modeler.saveXML({ format: true })
-                                    .then(({ xml }) => {
-                                        setModelData(xml);
-                                    });
-                            }
+                        onMount={(modeler) => {
+                            bpmnModelerRef.current = modeler;
                         }}
-                        onEvent={() => {}}
+                        onEvent={handleEvent}
+                        options={modelerOptions}
                     />
                 );
             case "form":
-                let formSchema;
-                try {
-                    formSchema = typeof modelData === 'string' ? JSON.parse(modelData) : modelData;
-                } catch (err) {
-                    formSchema = {
-                        components: [],
-                        type: 'default',
-                        id: 'form-' + Date.now(),
-                        schemaVersion: 3
-                    };
-                }
-
-                return (
-                    <CamundaForm
-                        key="form-editor"
-                        initialSchema={formSchema}
-                        onSchemaChange={(newSchema) => {
-                            setModelData(JSON.stringify(newSchema, null, 2));
-                        }}
-                    />
-                );
+                return <CamundaForm key="form-editor" formData={modelData} />;
             default:
                 return null;
         }
@@ -272,7 +131,7 @@ const ModelerComponent = () => {
             <h1>Modeler</h1>
 
             <div style={{ marginBottom: "10px" }}>
-                <label>Model Tipi: </label>
+                <label>Model Type: </label>
                 <select
                     value={modelType}
                     onChange={(e) => handleChangeModelType(e.target.value)}
@@ -281,19 +140,6 @@ const ModelerComponent = () => {
                     <option value="dmn">DMN</option>
                     <option value="form">Form</option>
                 </select>
-            </div>
-
-            <div style={{ marginBottom: "20px" }}>
-                <button onClick={handleNewModel}>Yeni Model</button>
-                <input
-                    type="file"
-                    style={{ marginLeft: "10px" }}
-                    accept=".bpmn,.dmn,.xml,.json,.form"
-                    onChange={handleLoadModel}
-                />
-                <button style={{ marginLeft: "10px" }} onClick={handleSaveModel}>
-                    Modeli Kaydet
-                </button>
             </div>
 
             <div style={{ height: "80vh", border: "1px solid #ccc" }}>
