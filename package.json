@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@ant-design/icons": "^5.5.2",
     "@bpmn-io/form-js": "^1.13.2",
     "@bpmn-io/form-js-editor": "^1.13.2",
     "@miragon/camunda-web-modeler": "^0.1.1",
@@ -14,6 +15,7 @@
     "cra-template": "1.2.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-router-dom": "^7.1.1",
     "react-scripts": "5.0.1",
     "web-vitals": "^4.2.4"
   },

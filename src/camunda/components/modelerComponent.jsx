@@ -1,22 +1,46 @@
-import React, { useState, useRef, useCallback, useMemo } from "react";
+import React, { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { BpmnModeler, DmnModeler } from "@miragon/camunda-web-modeler";
 import CamundaForm from "./camundaForm";
 import { defaultBpmnXml, defaultDmnXml, defaultFormJson } from "./defaultContents";
 import UploadComponent from "./uploadComponent";
 import ExportComponent from "./exportComponent";
-import DeployDiagramComponent from "./deployDiagramComponent";
-import { Layout, Select, Button, Modal, Space } from 'antd';
+import { Layout, Select, Space } from 'antd';
 
 const { Header, Content } = Layout;
 const { Option } = Select;
 
-const ModelerComponent = () => {
-    const [modelType, setModelType] = useState("bpmn");
-    const [modelData, setModelData] = useState(defaultBpmnXml);
-    const [fileName, setFileName] = useState("process-model.bpmn");
-    const [showDeployDialog, setShowDeployDialog] = useState(false);
+const ModelerComponent = ({ initialModelType, tabId, onModelerRef }) => {
+    const [modelType, setModelType] = useState(initialModelType || "bpmn");
+    const [modelData, setModelData] = useState(() => {
+        switch (initialModelType) {
+            case 'form':
+                return defaultFormJson;
+            case 'dmn':
+                return defaultDmnXml;
+            default:
+                return defaultBpmnXml;
+        }
+    });
+    const [fileName, setFileName] = useState(() => {
+        switch (initialModelType) {
+            case 'form':
+                return "form-model.form";
+            case 'dmn':
+                return "decision-model.dmn";
+            default:
+                return "process-model.bpmn";
+        }
+    });
+    
+    const containerRef = useRef(null);
     const bpmnModelerRef = useRef(null);
+    const dmnModelerRef = useRef(null);
     const formEditorRef = useRef(null);
+    const initializedRef = useRef({
+        bpmn: false,
+        dmn: false,
+        form: false
+    });
 
     const handleEvent = useCallback(async (event) => {
         if (event.source === "modeler" && event.event === "content.saved") {
@@ -26,21 +50,51 @@ const ModelerComponent = () => {
     }, []);
 
     const modelerOptions = useMemo(() => ({
-        refs: [bpmnModelerRef],
+        container: containerRef.current
     }), []);
 
+    useEffect(() => {
+        // Cleanup function for previous modeler
+        return () => {
+            if (bpmnModelerRef.current?.destroy) {
+                bpmnModelerRef.current.destroy();
+                bpmnModelerRef.current = null;
+            }
+            if (dmnModelerRef.current?.destroy) {
+                dmnModelerRef.current.destroy();
+                dmnModelerRef.current = null;
+            }
+            if (formEditorRef.current?.destroy) {
+                formEditorRef.current.destroy();
+                formEditorRef.current = null;
+            }
+            initializedRef.current = {
+                bpmn: false,
+                dmn: false,
+                form: false
+            };
+        };
+    }, [tabId]);
+
     const handleChangeModelType = async (newType) => {
+        // Cleanup previous modeler
+        if (modelType === 'bpmn' && bpmnModelerRef.current?.destroy) {
+            bpmnModelerRef.current.destroy();
+            bpmnModelerRef.current = null;
+        } else if (modelType === 'dmn' && dmnModelerRef.current?.destroy) {
+            dmnModelerRef.current.destroy();
+            dmnModelerRef.current = null;
+        } else if (modelType === 'form' && formEditorRef.current?.destroy) {
+            formEditorRef.current.destroy();
+            formEditorRef.current = null;
+        }
+
         setModelType(newType);
+        initializedRef.current[newType] = false;
+
         if (newType === "bpmn") {
             setModelData(defaultBpmnXml);
             setFileName("process-model.bpmn");
-            if (bpmnModelerRef.current) {
-                try {
-                    await bpmnModelerRef.current.importXML(defaultBpmnXml);
-                } catch (err) {
-                    console.error("Error importing XML:", err);
-                }
-            }
         } else if (newType === "dmn") {
             setModelData(defaultDmnXml);
             setFileName("decision-model.dmn");
@@ -69,13 +123,6 @@ const ModelerComponent = () => {
 
     return (
         <Layout style={{ minHeight: '100vh' }}>
-            <Header style={{ background: '#fff', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <h1 style={{ margin: 0 }}>Modeler</h1>
-                <Button type="primary" onClick={() => setShowDeployDialog(true)}>
-                    Deploy
-                </Button>
-            </Header>
-
             <Content style={{ padding: '24px', background: '#fff' }}>
                 <Space style={{ marginBottom: 16 }}>
                     <Select
@@ -101,22 +148,23 @@ const ModelerComponent = () => {
                             <ExportComponent
                                 modelData={modelData}
                                 fileName={fileName}
-                                bpmnModelerRef={bpmnModelerRef}
+                                bpmnModelerRef={modelType === "bpmn" ? bpmnModelerRef : dmnModelerRef}
                             />
                         </>
                     )}
                 </Space>
 
-                <div style={{ height: 'calc(100vh - 200px)', border: '1px solid #f0f0f0' }}>
+                <div ref={containerRef} style={{ height: 'calc(100vh - 200px)', border: '1px solid #f0f0f0' }}>
                     {modelType === "bpmn" && (
                         <BpmnModeler
-                            key="bpmn-editor"
+                            key={`bpmn-${tabId}`}
                             xml={modelData}
                             onMount={(modeler) => {
-                                bpmnModelerRef.current = modeler;
-                                modeler.importXML(modelData).catch((err) => {
-                                    console.error("Error importing XML:", err);
-                                });
+                                if (!initializedRef.current.bpmn) {
+                                    bpmnModelerRef.current = modeler;
+                                    initializedRef.current.bpmn = true;
+                                    onModelerRef?.(modeler);
+                                }
                             }}
                             onEvent={handleEvent}
                             options={modelerOptions}
@@ -124,10 +172,14 @@ const ModelerComponent = () => {
                     )}
                     {modelType === "dmn" && (
                         <DmnModeler
-                            key="dmn-editor"
+                            key={`dmn-${tabId}`}
                             xml={modelData}
                             onMount={(modeler) => {
-                                bpmnModelerRef.current = modeler;
+                                if (!initializedRef.current.dmn) {
+                                    dmnModelerRef.current = modeler;
+                                    initializedRef.current.dmn = true;
+                                    onModelerRef?.(modeler);
+                                }
                             }}
                             onEvent={handleEvent}
                             options={modelerOptions}
@@ -135,23 +187,13 @@ const ModelerComponent = () => {
                     )}
                     {modelType === "form" && (
                         <CamundaForm 
-                            key="form-editor" 
+                            key={`form-${tabId}`}
                             formData={modelData}
                             editorRef={formEditorRef}
                         />
                     )}
                 </div>
             </Content>
-
-            <Modal
-                title="Deploy Diagram"
-                open={showDeployDialog}
-                onCancel={() => setShowDeployDialog(false)}
-                footer={null}
-                width={600}
-            >
-                <DeployDiagramComponent />
-            </Modal>
         </Layout>
     );
 };

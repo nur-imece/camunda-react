@@ -50,10 +50,6 @@ const CamundaForm = ({ initialSchema, onSchemaChange, editorRef }) => {
 
   return (
     <div style={{ padding: '1rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <h3>Form Builder</h3>
-      </div>
-      
       <div 
         ref={formEditorRef}
         style={{ 
