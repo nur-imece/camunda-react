@@ -16,6 +16,7 @@ const ModelerComponent = () => {
     const [fileName, setFileName] = useState("process-model.bpmn");
     const [showDeployDialog, setShowDeployDialog] = useState(false);
     const bpmnModelerRef = useRef(null);
+    const formEditorRef = useRef(null);
 
     const handleEvent = useCallback(async (event) => {
         if (event.source === "modeler" && event.event === "content.saved") {
@@ -54,6 +55,18 @@ const ModelerComponent = () => {
         setFileName(name);
     };
 
+    const handleFormUpload = async (schema) => {
+        if (formEditorRef.current) {
+            try {
+                await formEditorRef.current.importSchema(schema);
+                setModelData(schema);
+            } catch (err) {
+                console.error('Form import error:', err);
+                alert('Form yüklenirken bir hata oluştu.');
+            }
+        }
+    };
+
     return (
         <Layout style={{ minHeight: '100vh' }}>
             <Header style={{ background: '#fff', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -74,7 +87,15 @@ const ModelerComponent = () => {
                         <Option value="dmn">DMN</Option>
                         <Option value="form">Form</Option>
                     </Select>
-                    {modelType !== "form" && (
+                    {modelType === "form" ? (
+                        <>
+                            <UploadComponent onFormUpload={handleFormUpload} />
+                            <ExportComponent
+                                formEditorRef={formEditorRef}
+                                fileName={fileName}
+                            />
+                        </>
+                    ) : (
                         <>
                             <UploadComponent onFileUpload={handleFileUpload} />
                             <ExportComponent
@@ -113,7 +134,11 @@ const ModelerComponent = () => {
                         />
                     )}
                     {modelType === "form" && (
-                        <CamundaForm key="form-editor" formData={modelData} />
+                        <CamundaForm 
+                            key="form-editor" 
+                            formData={modelData}
+                            editorRef={formEditorRef}
+                        />
                     )}
                 </div>
             </Content>
@@ -123,7 +148,7 @@ const ModelerComponent = () => {
                 open={showDeployDialog}
                 onCancel={() => setShowDeployDialog(false)}
                 footer={null}
-                width={800}
+                width={600}
             >
                 <DeployDiagramComponent />
             </Modal>

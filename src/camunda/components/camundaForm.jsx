@@ -3,7 +3,7 @@ import { FormEditor } from '@bpmn-io/form-js-editor';
 import '@bpmn-io/form-js-editor/dist/assets/form-js-editor.css';
 import '@bpmn-io/form-js/dist/assets/form-js.css';
 
-const CamundaForm = ({ initialSchema, onSchemaChange }) => {
+const CamundaForm = ({ initialSchema, onSchemaChange, editorRef }) => {
   const [formSchema, setFormSchema] = useState(initialSchema || {
     components: [],
     type: 'default',
@@ -12,7 +12,6 @@ const CamundaForm = ({ initialSchema, onSchemaChange }) => {
   });
 
   const formEditorRef = useRef(null);
-  const editorInstanceRef = useRef(null);
 
   useEffect(() => {
     if (!formEditorRef.current) return;
@@ -28,7 +27,7 @@ const CamundaForm = ({ initialSchema, onSchemaChange }) => {
       }
     });
 
-    editorInstanceRef.current = editor;
+    editorRef.current = editor;
 
     editor.importSchema(formSchema).then(() => {
       onSchemaChange?.(editor.getSchema());
@@ -43,64 +42,18 @@ const CamundaForm = ({ initialSchema, onSchemaChange }) => {
     });
 
     return () => {
-      if (editorInstanceRef.current) {
-        editorInstanceRef.current.destroy();
+      if (editorRef.current) {
+        editorRef.current.destroy();
       }
     };
-  }, [initialSchema, onSchemaChange]);
-
-  const handleSaveForm = () => {
-    if (!editorInstanceRef.current) return;
-
-    const schema = editorInstanceRef.current.getSchema();
-    const jsonStr = JSON.stringify(schema, null, 2);
-    const blob = new Blob([jsonStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'form-schema.form';
-    a.click();
-    
-    URL.revokeObjectURL(url);
-  };
-
-  const handleLoadForm = (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      try {
-        const schema = JSON.parse(e.target.result);
-        await editorInstanceRef.current.importSchema(schema);
-        setFormSchema(schema);
-        onSchemaChange?.(schema);
-      } catch (err) {
-        console.error('Form yükleme hatası:', err);
-        alert('Form yüklenirken bir hata oluştu.');
-      }
-    };
-    reader.readAsText(file);
-  };
+  }, [initialSchema, onSchemaChange, editorRef]);
 
   return (
     <div style={{ padding: '1rem' }}>
-      <h3>Form Builder</h3>
-
-      <div style={{ marginBottom: '1rem' }}>
-        <button onClick={handleSaveForm}>Formu İndir</button>
-        <label style={{ marginLeft: '10px', cursor: 'pointer' }}>
-          Form Yükle
-          <input
-            type="file"
-            accept=".form,.json"
-            style={{ display: 'none' }}
-            onChange={handleLoadForm}
-          />
-        </label>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <h3>Form Builder</h3>
       </div>
-
+      
       <div 
         ref={formEditorRef}
         style={{ 
