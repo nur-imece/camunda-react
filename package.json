@@ -8,6 +8,7 @@
     "@miragon/camunda-web-modeler": "^0.1.1",
     "ajv": "^8.0.0",
     "ajv-keywords": "^5.0.0",
+    "antd": "^5.23.0",
     "bpmn-js": "^18.1.2",
     "camunda-bpmn-js": "^5.4.2",
     "cra-template": "1.2.0",

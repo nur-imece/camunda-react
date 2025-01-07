@@ -1,105 +1,103 @@
 import React, { useState } from "react";
+import { Form, Input, Upload, Button, message } from "antd";
 
 const DeployDiagramComponent = () => {
-    const [deploymentName, setDeploymentName] = useState("");
-    const [tenantId, setTenantId] = useState("");
-    const [restEndpoint, setRestEndpoint] = useState("");
-    const [additionalFiles, setAdditionalFiles] = useState([]);
+    const [form] = Form.useForm();
+    const [fileList, setFileList] = useState([]);
 
-    const handleFileUpload = (event) => {
-        const files = Array.from(event.target.files);
-        setAdditionalFiles(files);
-    };
-
-    const handleDeploy = async () => {
-        if (!deploymentName || !restEndpoint) {
-            alert("Deployment name and REST endpoint are required!");
+    const handleDeploy = async (values) => {
+        if (!values.deploymentName || !values.restEndpoint) {
+            message.error("Deployment name and REST endpoint are required!");
             return;
         }
 
         const formData = new FormData();
-        formData.append("deployment-name", deploymentName);
-        if (tenantId) {
-            formData.append("tenant-id", tenantId);
+        formData.append("deployment-name", values.deploymentName);
+        if (values.tenantId) {
+            formData.append("tenant-id", values.tenantId);
         }
-        additionalFiles.forEach((file, index) => {
-            formData.append(`file${index}`, file);
+        fileList.forEach((file, index) => {
+            formData.append(`file${index}`, file.originFileObj);
         });
 
         try {
-            const response = await fetch(`${restEndpoint}`, {
+            const response = await fetch(values.restEndpoint, {
                 method: "POST",
                 body: formData,
             });
 
             if (response.ok) {
                 const result = await response.json();
-                alert(`Deployment successful! Deployment ID: ${result.id}`);
+                message.success(`Deployment successful! Deployment ID: ${result.id}`);
+                form.resetFields();
+                setFileList([]);
             } else {
                 const errorText = await response.text();
-                alert(`Deployment failed: ${errorText}`);
+                message.error(`Deployment failed: ${errorText}`);
             }
         } catch (error) {
-            alert(`Deployment error: ${error.message}`);
+            message.error(`Deployment error: ${error.message}`);
         }
     };
 
+    const uploadProps = {
+        multiple: true,
+        fileList,
+        onChange: ({ fileList: newFileList }) => {
+            setFileList(newFileList);
+        },
+        onRemove: (file) => {
+            const index = fileList.indexOf(file);
+            const newFileList = fileList.slice();
+            newFileList.splice(index, 1);
+            setFileList(newFileList);
+        },
+    };
+
     return (
-        <div style={{ padding: "1rem", border: "1px solid #ccc", borderRadius: "5px", width: "400px" }}>
-            <h3>Deploy Diagram</h3>
-            <div style={{ marginBottom: "10px" }}>
-                <label>Deployment Name:</label>
-                <input
-                    type="text"
-                    value={deploymentName}
-                    onChange={(e) => setDeploymentName(e.target.value)}
-                    placeholder="Deployment name"
-                    style={{ width: "100%", padding: "5px", marginTop: "5px" }}
-                />
-            </div>
-            <div style={{ marginBottom: "10px" }}>
-                <label>Tenant ID (Optional):</label>
-                <input
-                    type="text"
-                    value={tenantId}
-                    onChange={(e) => setTenantId(e.target.value)}
-                    placeholder="Tenant ID"
-                    style={{ width: "100%", padding: "5px", marginTop: "5px" }}
-                />
-            </div>
-            <div style={{ marginBottom: "10px" }}>
-                <label>REST Endpoint:</label>
-                <input
-                    type="text"
-                    value={restEndpoint}
-                    onChange={(e) => setRestEndpoint(e.target.value)}
-                    placeholder="https://your-camunda-endpoint"
-                    style={{ width: "100%", padding: "5px", marginTop: "5px" }}
-                />
-            </div>
-            <div style={{ marginBottom: "10px" }}>
-                <label>Include Additional Files:</label>
-                <input
-                    type="file"
-                    multiple
-                    onChange={handleFileUpload}
-                    style={{ display: "block", marginTop: "5px" }}
-                />
-            </div>
-            <button
-                onClick={handleDeploy}
-                style={{
-                    backgroundColor: "#007bff",
-                    color: "#fff",
-                    border: "none",
-                    padding: "10px",
-                    cursor: "pointer",
-                    width: "100%",
-                }}
+        <Form
+            form={form}
+            layout="vertical"
+            onFinish={handleDeploy}
+            style={{ maxWidth: 600 }}
+        >
+            <Form.Item
+                label="Deployment Name"
+                name="deploymentName"
+                rules={[{ required: true, message: "Please input deployment name!" }]}
             >
-                Deploy
-            </button>
-        </div>
+                <Input placeholder="Enter deployment name" />
+            </Form.Item>
+
+            <Form.Item
+                label="Tenant ID (Optional)"
+                name="tenantId"
+            >
+                <Input placeholder="Enter tenant ID" />
+            </Form.Item>
+
+            <Form.Item
+                label="REST Endpoint"
+                name="restEndpoint"
+                rules={[{ required: true, message: "Please input REST endpoint!" }]}
+            >
+                <Input placeholder="https://your-camunda-endpoint" />
+            </Form.Item>
+
+            <Form.Item
+                label="Additional Files"
+            >
+                <Upload {...uploadProps}>
+                    <Button>Select Files</Button>
+                </Upload>
+            </Form.Item>
+
+            <Form.Item>
+                <Button type="primary" htmlType="submit" block>
+                    Deploy
+                </Button>
+            </Form.Item>
+        </Form>
     );
 };
 

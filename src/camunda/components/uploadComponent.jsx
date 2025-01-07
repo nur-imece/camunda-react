@@ -1,28 +1,25 @@
-import React from "react";
+import React from 'react';
+import { Upload, Button } from 'antd';
 
 const UploadComponent = ({ onFileUpload }) => {
-    const handleFileChange = (event) => {
-        const file = event.target.files[0];
-        if (file && onFileUpload) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const content = e.target.result;
-                onFileUpload(content, file.name);
-            };
-            reader.readAsText(file);
-        }
+    const handleUpload = (file) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const content = e.target.result;
+            onFileUpload(content, file.name);
+        };
+        reader.readAsText(file);
+        return false;
     };
 
     return (
-        <div className="upload-container">
-            <label className="upload-label">Upload Model: </label>
-            <input
-                type="file"
-                accept=".bpmn,.dmn,.form,.json,.xml"
-                className="upload-input"
-                onChange={handleFileChange}
-            />
-        </div>
+        <Upload
+            beforeUpload={handleUpload}
+            showUploadList={false}
+            accept=".bpmn,.dmn,.form"
+        >
+            <Button>Upload File</Button>
+        </Upload>
     );
 };
 

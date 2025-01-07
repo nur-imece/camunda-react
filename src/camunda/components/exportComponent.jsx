@@ -1,34 +1,36 @@
 import React from "react";
+import { Button } from "antd";
 
 const ExportComponent = ({ modelData, fileName, bpmnModelerRef }) => {
     const handleExport = async () => {
-        try {
-            let dataToSave = modelData;
-            let mimeType = "application/xml";
-
-            if (bpmnModelerRef.current) {
+        if (bpmnModelerRef?.current) {
+            try {
                 const { xml } = await bpmnModelerRef.current.saveXML({ format: true });
-                dataToSave = xml;
+                const blob = new Blob([xml], { type: "text/xml" });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = fileName;
+                a.click();
+                window.URL.revokeObjectURL(url);
+            } catch (err) {
+                console.error("Error exporting XML:", err);
             }
-
-            const blob = new Blob([dataToSave], { type: mimeType });
-            const url = URL.createObjectURL(blob);
+        } else {
+            const blob = new Blob([modelData], { type: "text/xml" });
+            const url = window.URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = url;
             a.download = fileName;
             a.click();
-            URL.revokeObjectURL(url);
-        } catch (error) {
-            console.error("Error exporting model:", error);
+            window.URL.revokeObjectURL(url);
         }
     };
 
     return (
-        <div className="export-container">
-            <button className="export-button" onClick={handleExport}>
-                Export Model
-            </button>
-        </div>
+        <Button onClick={handleExport}>
+            Export File
+        </Button>
     );
 };
 

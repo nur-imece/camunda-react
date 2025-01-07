@@ -5,12 +5,16 @@ import { defaultBpmnXml, defaultDmnXml, defaultFormJson } from "./defaultContent
 import UploadComponent from "./uploadComponent";
 import ExportComponent from "./exportComponent";
 import DeployDiagramComponent from "./deployDiagramComponent";
+import { Layout, Select, Button, Modal, Space } from 'antd';
+
+const { Header, Content } = Layout;
+const { Option } = Select;
 
 const ModelerComponent = () => {
     const [modelType, setModelType] = useState("bpmn");
     const [modelData, setModelData] = useState(defaultBpmnXml);
     const [fileName, setFileName] = useState("process-model.bpmn");
-    const [showDeployDialog, setShowDeployDialog] = useState(false); // State to control Deploy form visibility
+    const [showDeployDialog, setShowDeployDialog] = useState(false);
     const bpmnModelerRef = useRef(null);
 
     const handleEvent = useCallback(async (event) => {
@@ -51,100 +55,79 @@ const ModelerComponent = () => {
     };
 
     return (
-        <div className="container">
-            <h1 className="header">Modeler</h1>
+        <Layout style={{ minHeight: '100vh' }}>
+            <Header style={{ background: '#fff', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <h1 style={{ margin: 0 }}>Modeler</h1>
+                <Button type="primary" onClick={() => setShowDeployDialog(true)}>
+                    Deploy
+                </Button>
+            </Header>
 
-            <div className="form-group">
-                <label>Model Type: </label>
-                <select
-                    value={modelType}
-                    onChange={(e) => handleChangeModelType(e.target.value)}
-                    className="model-select"
-                >
-                    <option value="bpmn">BPMN</option>
-                    <option value="dmn">DMN</option>
-                    <option value="form">Form</option>
-                </select>
-            </div>
+            <Content style={{ padding: '24px', background: '#fff' }}>
+                <Space style={{ marginBottom: 16 }}>
+                    <Select
+                        value={modelType}
+                        onChange={handleChangeModelType}
+                        style={{ width: 120 }}
+                    >
+                        <Option value="bpmn">BPMN</Option>
+                        <Option value="dmn">DMN</Option>
+                        <Option value="form">Form</Option>
+                    </Select>
+                    {modelType !== "form" && (
+                        <>
+                            <UploadComponent onFileUpload={handleFileUpload} />
+                            <ExportComponent
+                                modelData={modelData}
+                                fileName={fileName}
+                                bpmnModelerRef={bpmnModelerRef}
+                            />
+                        </>
+                    )}
+                </Space>
 
-            <button
-                style={{
-                    marginTop: "10px",
-                    padding: "10px",
-                    backgroundColor: "#007bff",
-                    color: "#fff",
-                    border: "none",
-                    cursor: "pointer",
-                }}
-                onClick={() => setShowDeployDialog(true)} // Show Deploy form as a modal
-            >
-                Deploy
-            </button>
-
-            {/* Deploy Modal */}
-            {showDeployDialog && (
-                <div className="modal-overlay">
-                    <div className="modal-content">
-                        <DeployDiagramComponent />
-                        <button
-                            style={{
-                                marginTop: "10px",
-                                padding: "10px",
-                                backgroundColor: "#dc3545",
-                                color: "#fff",
-                                border: "none",
-                                cursor: "pointer",
+                <div style={{ height: 'calc(100vh - 200px)', border: '1px solid #f0f0f0' }}>
+                    {modelType === "bpmn" && (
+                        <BpmnModeler
+                            key="bpmn-editor"
+                            xml={modelData}
+                            onMount={(modeler) => {
+                                bpmnModelerRef.current = modeler;
+                                modeler.importXML(modelData).catch((err) => {
+                                    console.error("Error importing XML:", err);
+                                });
                             }}
-                            onClick={() => setShowDeployDialog(false)} // Close Deploy modal
-                        >
-                            Close
-                        </button>
-                    </div>
+                            onEvent={handleEvent}
+                            options={modelerOptions}
+                        />
+                    )}
+                    {modelType === "dmn" && (
+                        <DmnModeler
+                            key="dmn-editor"
+                            xml={modelData}
+                            onMount={(modeler) => {
+                                bpmnModelerRef.current = modeler;
+                            }}
+                            onEvent={handleEvent}
+                            options={modelerOptions}
+                        />
+                    )}
+                    {modelType === "form" && (
+                        <CamundaForm key="form-editor" formData={modelData} />
+                    )}
                 </div>
-            )}
+            </Content>
 
-            {modelType !== "form" && (
-                <>
-                    <UploadComponent onFileUpload={handleFileUpload} />
-                    <ExportComponent
-                        modelData={modelData}
-                        fileName={fileName}
-                        bpmnModelerRef={bpmnModelerRef}
-                    />
-                </>
-            )}
-
-            <div className="editor-container">
-                {modelType === "bpmn" && (
-                    <BpmnModeler
-                        key="bpmn-editor"
-                        xml={modelData}
-                        onMount={(modeler) => {
-                            bpmnModelerRef.current = modeler;
-                            modeler.importXML(modelData).catch((err) => {
-                                console.error("Error importing XML:", err);
-                            });
-                        }}
-                        onEvent={handleEvent}
-                        options={modelerOptions}
-                    />
-                )}
-                {modelType === "dmn" && (
-                    <DmnModeler
-                        key="dmn-editor"
-                        xml={modelData}
-                        onMount={(modeler) => {
-                            bpmnModelerRef.current = modeler;
-                        }}
-                        onEvent={handleEvent}
-                        options={modelerOptions}
-                    />
-                )}
-                {modelType === "form" && (
-                    <CamundaForm key="form-editor" formData={modelData} />
-                )}
-            </div>
-        </div>
+            <Modal
+                title="Deploy Diagram"
+                open={showDeployDialog}
+                onCancel={() => setShowDeployDialog(false)}
+                footer={null}
+                width={800}
+            >
+                <DeployDiagramComponent />
+            </Modal>
+        </Layout>
     );
 };
 
