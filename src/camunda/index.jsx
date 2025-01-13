@@ -2,8 +2,12 @@ import React from 'react';
 import { Layout, Menu } from 'antd';
 import { useNavigate, Routes, Route } from 'react-router-dom';
 import TabsContainer from './components/TabsContainer';
-import CamundaUser from './components/camundaUser';
-import CamundaAdmin from './components/camundaAdmin';
+import Admin from './components/admin';
+import DeploymentList from "./deployment/list";
+import User from "./components/user";
+import CamundaUser from "./camundaUser";
+import UpdateUser from "./camundaUser/components/updateUser";
+import CreateUser from "./camundaUser/components/createUser";
 
 const { Sider, Content } = Layout;
 
@@ -34,15 +38,28 @@ const CamundaIndex = () => {
                             key: '/admin',
                             label: 'Admin Panel',
                         },
+                        {
+                            key: '/deployments',
+                            label: 'Deployment',
+                        },
+                        {
+                            key: "/camundaUsers",
+                            label: 'Camunda Users',
+                        }
                     ]}
                 />
             </Sider>
             <Content>
                 <Routes>
                     <Route path="/modeler" element={<TabsContainer />} />
-                    <Route path="/user" element={<CamundaUser />} />
-                    <Route path="/admin" element={<CamundaAdmin />} />
+                    <Route path="/user" element={<User />} />
+                    <Route path="/admin" element={<Admin />} />
+                    <Route path="/deployments" element={<DeploymentList />} />
                     <Route path="/" element={<TabsContainer />} />
+                    <Route path={"/camundaUsers"} element={<CamundaUser />} />
+                    <Route path={"/updateUser"} element={<UpdateUser />} />
+                    <Route path={"/createUser"} element={<CreateUser />} />
+
                 </Routes>
             </Content>
         </Layout>
